@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda Eventos</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Agenda Eventos</h1>
+    <form id="formularioEvento">
+        <input type="text" id="titulo" placeholder="Título" required>
+        <input type="date" id="fecha" required>
+        <textarea id="descripcion" placeholder="Descripción"></textarea>
+        <button type="submit">Agregar Evento</button>
+    </form>
+    <h2>Eventos</h2>
+    <ul id="listaEventos"></ul>
+
+
+    <script>
+
+        document.getElementById('formularioEvento').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const titulo = document.getElementById('titulo').value;
+            const fecha = document.getElementById('fecha').value;
+            const descripcion = document.getElementById('descripcion').value;
+
+            fetch('http://localhost:3000/eventos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ titulo, fecha, descripcion })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error); // Mostrar mensaje de error
+                } else {
+                    alert(data.mensaje);
+                    cargarEventos();
+                    limpiarCampos();
+                }
+            })
+            .catch(error => console.error('Error al agregar evento:', error)); // Manejo de errores
+        });
+
+        function limpiarCampos() {
+            document.getElementById('titulo').value = '';
+            document.getElementById('fecha').value = '';
+            document.getElementById('descripcion').value = '';
+        }
+
+        function cargarEventos() {
+            fetch('/eventos')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error en la solicitud: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const listaEventos = document.getElementById('listaEventos');
+                    listaEventos.innerHTML = '';
+                    data.eventos.forEach(evento => {
+                        const li = document.createElement('li');
+                        li.textContent = `${evento.titulo} - ${evento.fecha}: ${evento.descripcion}`;
+
+                        // Botón para editar
+                        const botonEditar = document.createElement('button');
+                        botonEditar.textContent = 'Editar';
+                        botonEditar.onclick = () => editarEvento(evento.id);
+
+                        // Botón para eliminar
+                        const botonEliminar = document.createElement('button');
+                        botonEliminar.textContent = 'Eliminar';
+                        botonEliminar.onclick = () => eliminarEvento(evento.id);
+
+                        li.appendChild(botonEditar);
+                        li.appendChild(botonEliminar);
+                        listaEventos.appendChild(li);
+                    });
+                })
+                .catch(error => console.error('Error al cargar eventos:', error)); // Manejo de errores
+        }
+
+        cargarEventos(); // Llama a cargarEventos una vez al inicio, fuera de cualquier función para evitar recursividad
+
+        function editarEvento(id) {
+            const titulo = prompt('Nuevo título:');
+            const fecha = prompt('Nueva fecha (YYYY-MM-DD):');
+            const descripcion = prompt('Nueva descripción:');
+
+            fetch(`http://localhost:3001/eventos/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ titulo, fecha, descripcion })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.mensaje);
+                cargarEventos();
+            })
+            .catch(error => console.error('Error al editar evento:', error)); // Manejo de errores
+        }
+
+        function eliminarEvento(id) {
+            if (confirm('¿Estás seguro de que deseas eliminar este evento?')) {
+                fetch(`/eventos/${id}`, {
+                    method: 'DELETE',
+                    // Asegúrate de definir 'token' o eliminar esta línea si no es necesario
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.mensaje);
+                    cargarEventos();
+                })
+                .catch(error => console.error('Error al eliminar evento:', error)); // Manejo de errores
+            }
+        }
+    </script>
+</body>
+</html>
